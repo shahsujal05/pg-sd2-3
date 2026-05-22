@@ -14,20 +14,38 @@ app.set('views', './app/views');
 // Parse POST form data
 app.use(express.urlencoded({ extended: true }));
 
+// Sessions
+var session = require('express-session');
+app.use(session({
+    secret: 'secretkeysdfjsflyoifasd',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
+}));
+
 // Get the functions in the db.js file to use
 const db = require('./services/db');
 
 // Get Models
-const { Student }     = require("./models/student");
-const { Programme }   = require("./models/programme");
-const programmes      = require("./models/programmes");
+const { Student }   = require("./models/student");
+const { Programme } = require("./models/programme");
+const programmes    = require("./models/programmes");
+const { User }      = require("./models/user");
 
+// -------------------------------------------------------
 // ROOT
+// -------------------------------------------------------
 app.get("/", function(req, res) {
-    res.render("index", { title: "SD2 Student App" });
+    if (req.session.uid) {
+        res.send('Welcome back, user ' + req.session.uid + '! <a href="/logout">Logout</a>');
+    } else {
+        res.render("index", { title: "SD2 Student App" });
+    }
 });
 
-// All students JSON
+// -------------------------------------------------------
+// STUDENTS
+// -------------------------------------------------------
 app.get("/all-students", function(req, res) {
     var sql = 'SELECT * FROM Students';
     db.query(sql).then(results => {
@@ -35,7 +53,6 @@ app.get("/all-students", function(req, res) {
     });
 });
 
-// All students formatted
 app.get("/all-students-formatted", function(req, res) {
     var sql = 'SELECT * FROM Students';
     db.query(sql).then(results => {
@@ -43,7 +60,6 @@ app.get("/all-students-formatted", function(req, res) {
     });
 });
 
-// Single student page - Week 6 MVC version
 app.get("/student-single/:id", async function(req, res) {
     var stId = req.params.id;
     var student = new Student(stId);
@@ -54,7 +70,9 @@ app.get("/student-single/:id", async function(req, res) {
     res.render('student', { title: student.name, student: student, programmes: allProgs });
 });
 
-// All programmes JSON
+// -------------------------------------------------------
+// PROGRAMMES
+// -------------------------------------------------------
 app.get("/all-programmes", function(req, res) {
     var sql = 'SELECT * FROM Programmes';
     db.query(sql).then(results => {
@@ -62,7 +80,6 @@ app.get("/all-programmes", function(req, res) {
     });
 });
 
-// All programmes formatted
 app.get("/all-programmes-formatted", function(req, res) {
     var sql = 'SELECT * FROM Programmes';
     db.query(sql).then(results => {
@@ -70,7 +87,6 @@ app.get("/all-programmes-formatted", function(req, res) {
     });
 });
 
-// Single programme page
 app.get("/programme-single/:id", async function(req, res) {
     var pCode = req.params.id;
     var pSql = "SELECT * FROM Programmes WHERE id = ?";
@@ -86,7 +102,9 @@ app.get("/programme-single/:id", async function(req, res) {
     });
 });
 
-// All modules JSON
+// -------------------------------------------------------
+// MODULES
+// -------------------------------------------------------
 app.get("/all-modules", function(req, res) {
     var sql = 'SELECT * FROM Modules';
     db.query(sql).then(results => {
@@ -94,7 +112,6 @@ app.get("/all-modules", function(req, res) {
     });
 });
 
-// All modules formatted
 app.get("/all-modules-formatted", function(req, res) {
     var sql = 'SELECT * FROM Modules';
     db.query(sql).then(results => {
@@ -102,7 +119,6 @@ app.get("/all-modules-formatted", function(req, res) {
     });
 });
 
-// Single module page
 app.get("/module-single/:code", async function(req, res) {
     var mCode = req.params.code;
     var mSql = "SELECT * FROM Modules WHERE code = ?";
@@ -124,7 +140,9 @@ app.get("/module-single/:code", async function(req, res) {
     });
 });
 
-// POST - Add note to student
+// -------------------------------------------------------
+// WEEK 7 - CRUD
+// -------------------------------------------------------
 app.post('/add-note', async function(req, res) {
     var params = req.body;
     var student = new Student(params.id);
@@ -137,7 +155,6 @@ app.post('/add-note', async function(req, res) {
     }
 });
 
-// POST - Change student programme
 app.post('/allocate-programme', async function(req, res) {
     var params = req.body;
     var student = new Student(params.id);
@@ -150,7 +167,66 @@ app.post('/allocate-programme', async function(req, res) {
     }
 });
 
-// db_test routes
+// -------------------------------------------------------
+// WEEK 8 - AUTHENTICATION
+// -------------------------------------------------------
+app.get('/register', function(req, res) {
+    res.render('register', { title: 'Register' });
+});
+
+app.get('/login', function(req, res) {
+    res.render('login', { title: 'Login' });
+});
+
+app.post('/set-password', async function(req, res) {
+    var params = req.body;
+    var user = new User(params.email);
+    try {
+        var uId = await user.getIdFromEmail();
+        if (uId) {
+            await user.setUserPassword(params.password);
+            res.send('Password set! <a href="/login">Login now</a>');
+        } else {
+            await user.addUser(params.password);
+            res.send('Account created! <a href="/login">Login now</a>');
+        }
+    } catch (err) {
+        console.error('Error setting password', err.message);
+        res.send('Error: ' + err.message);
+    }
+});
+
+app.post('/authenticate', async function(req, res) {
+    var params = req.body;
+    var user = new User(params.email);
+    try {
+        var uId = await user.getIdFromEmail();
+        if (uId) {
+            var match = await user.authenticate(params.password);
+            if (match) {
+                req.session.uid = uId;
+                req.session.loggedIn = true;
+                res.redirect('/student-single/' + uId);
+            } else {
+                res.send('Invalid password. <a href="/login">Try again</a>');
+            }
+        } else {
+            res.send('Invalid email. <a href="/login">Try again</a>');
+        }
+    } catch (err) {
+        console.error('Error during login', err.message);
+        res.send('Error: ' + err.message);
+    }
+});
+
+app.get('/logout', function(req, res) {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
+// -------------------------------------------------------
+// ORIGINAL ROUTES
+// -------------------------------------------------------
 app.get("/db_test", function(req, res) {
     var sql = 'SELECT * FROM test_table';
     db.query(sql).then(results => {
