@@ -1,0 +1,17 @@
+extends layout
+
+block content
+    h1 Register
+    form(action='/set-password' method='POST')
+        p
+            label(for='email') Email address:
+            br
+            input(type='email' name='email' required)
+        p
+            label(for='password') Password:
+            br
+            input(type='password' name='password' required)
+        p
+            input(type='submit' value='Register')
+    p
+        a(href='/login') Already have an account? Login here

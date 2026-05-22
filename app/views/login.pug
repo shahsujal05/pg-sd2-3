@@ -1,0 +1,17 @@
+extends layout
+
+block content
+    h1 Login
+    form(action='/authenticate' method='POST')
+        p
+            label(for='email') Email address:
+            br
+            input(type='email' name='email' required)
+        p
+            label(for='password') Password:
+            br
+            input(type='password' name='password' required)
+        p
+            input(type='submit' value='Login')
+    p
+        a(href='/register') No account yet? Register here
