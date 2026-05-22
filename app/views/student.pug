@@ -1,0 +1,55 @@
+extends layout
+
+block content
+    h1 Student: #{student.name}
+    p
+        strong Programme:
+        |  #{student.programme ? student.programme.pName : 'Not assigned'}
+
+    if student.note
+        p
+            strong Note:
+            |  #{student.note}
+    else
+        p
+            em No note yet.
+
+    h2 Modules
+    if student.modules.length > 0
+        table
+            tr
+                th Module Code
+                th Module Name
+            for mod in student.modules
+                tr
+                    td #{mod.code}
+                    td
+                        a(href='/module-single/' + mod.code) #{mod.name}
+    else
+        p No modules found.
+
+    hr
+
+    h2 Add / Update Note
+    form(action='/add-note' method='POST')
+        input(type='hidden' name='id' value=student.id)
+        textarea(name='note' rows=5 cols=50) #{student.note}
+        div
+        input(type='submit' value='Save Note')
+
+    hr
+
+    h2 Change Programme
+    form(action='/allocate-programme' method='POST')
+        input(type='hidden' name='id' value=student.id)
+        select(name='programme')
+            for programme in programmes
+                if student.programme && programme.id == student.programme.id
+                    option(value=programme.id selected='selected') #{programme.pName}
+                else
+                    option(value=programme.id) #{programme.pName}
+        div
+        input(type='submit' value='Update Programme')
+
+    p
+        a(href='/all-students-formatted') &larr; Back to all students

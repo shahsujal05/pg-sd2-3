@@ -11,30 +11,50 @@ app.use(express.static("static"));
 app.set('view engine', 'pug');
 app.set('views', './app/views');
 
+// Parse POST form data
+app.use(express.urlencoded({ extended: true }));
+
+// Sessions (Week 8)
+var session = require('express-session');
+app.use(session({
+    secret: 'secretkeysdfjsflyoifasd',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false }
+}));
+
 // Get the functions in the db.js file to use
 const db = require('./services/db');
+
+// Get Models
+const { Student }        = require("./models/student");
+const { Programme }      = require("./models/programme");
+const { Module: Mod }    = require("./models/module");
+const programmes         = require("./models/programmes");
+const { User }           = require("./models/user");
 
 // -------------------------------------------------------
 // ROOT
 // -------------------------------------------------------
 app.get("/", function(req, res) {
-    res.render("index");
+    console.log(req.session);
+    if (req.session.uid) {
+        res.send('Welcome back, user ' + req.session.uid + '! <a href="/logout">Logout</a>');
+    } else {
+        res.send('Please login to view this page! <a href="/login">Login</a> | <a href="/register">Register</a>');
+    }
 });
 
 // -------------------------------------------------------
-// WEEK 4 - STUDENTS
+// STUDENTS
 // -------------------------------------------------------
-
-// Task 1: JSON listing of all students
 app.get("/all-students", function(req, res) {
     var sql = 'SELECT * FROM Students';
     db.query(sql).then(results => {
-        console.log(results);
         res.json(results);
     });
 });
 
-// Task 2: HTML formatted list of all students (via PUG template)
 app.get("/all-students-formatted", function(req, res) {
     var sql = 'SELECT * FROM Students';
     db.query(sql).then(results => {
@@ -42,37 +62,21 @@ app.get("/all-students-formatted", function(req, res) {
     });
 });
 
-// Task 3: Single student page - name, programme, modules
+// Single student page (MVC style - Week 6)
 app.get("/student-single/:id", async function(req, res) {
     var stId = req.params.id;
-
-    // Get student name and programme
-    var stSql = "SELECT s.name as student, ps.name as programme, \
-                 ps.id as pcode FROM Students s \
-                 JOIN Student_Programme sp ON sp.id = s.id \
-                 JOIN Programmes ps ON ps.id = sp.programme \
-                 WHERE s.id = ?";
-    var stResult = await db.query(stSql, [stId]);
-
-    var pCode = stResult[0]['pcode'];
-
-    // Get modules for this student via their programme
-    var modSql = "SELECT * FROM Programme_Modules pm \
-                  JOIN Modules m ON m.code = pm.module \
-                  WHERE programme = ?";
-    var modResult = await db.query(modSql, [pCode]);
-
-    res.render('student-single', {
-        student: stResult[0],
-        modules: modResult
-    });
+    var student = new Student(stId);
+    await student.getStudentDetails();
+    await student.getStudentProgramme();
+    await student.getStudentModules();
+    var allProgs = await programmes.getAllProgrammes();
+    console.log(student);
+    res.render('student', { student: student, programmes: allProgs });
 });
 
 // -------------------------------------------------------
-// WEEK 4 - PROGRAMMES
+// PROGRAMMES
 // -------------------------------------------------------
-
-// Independent Task 1: JSON listing of all programmes
 app.get("/all-programmes", function(req, res) {
     var sql = 'SELECT * FROM Programmes';
     db.query(sql).then(results => {
@@ -80,7 +84,6 @@ app.get("/all-programmes", function(req, res) {
     });
 });
 
-// Independent Task 2: HTML formatted list of programmes
 app.get("/all-programmes-formatted", function(req, res) {
     var sql = 'SELECT * FROM Programmes';
     db.query(sql).then(results => {
@@ -88,18 +91,14 @@ app.get("/all-programmes-formatted", function(req, res) {
     });
 });
 
-// Independent Task 3: Single programme page with its modules
 app.get("/programme-single/:id", async function(req, res) {
     var pCode = req.params.id;
-
     var pSql = "SELECT * FROM Programmes WHERE id = ?";
     var pResult = await db.query(pSql, [pCode]);
-
     var modSql = "SELECT * FROM Programme_Modules pm \
                   JOIN Modules m ON m.code = pm.module \
                   WHERE programme = ?";
     var modResult = await db.query(modSql, [pCode]);
-
     res.render('programme-single', {
         programme: pResult[0],
         modules: modResult
@@ -107,10 +106,8 @@ app.get("/programme-single/:id", async function(req, res) {
 });
 
 // -------------------------------------------------------
-// WEEK 4 - MODULES
+// MODULES
 // -------------------------------------------------------
-
-// Independent Task 4: JSON listing of all modules
 app.get("/all-modules", function(req, res) {
     var sql = 'SELECT * FROM Modules';
     db.query(sql).then(results => {
@@ -118,7 +115,6 @@ app.get("/all-modules", function(req, res) {
     });
 });
 
-// Independent Task 5: HTML formatted list of modules
 app.get("/all-modules-formatted", function(req, res) {
     var sql = 'SELECT * FROM Modules';
     db.query(sql).then(results => {
@@ -126,24 +122,19 @@ app.get("/all-modules-formatted", function(req, res) {
     });
 });
 
-// Independent Task 6: Single module page - title, programme, students
 app.get("/module-single/:code", async function(req, res) {
     var mCode = req.params.code;
-
-    var mSql = "SELECT * FROM Modules WHERE code = ?";
+    var mSql  = "SELECT * FROM Modules WHERE code = ?";
     var mResult = await db.query(mSql, [mCode]);
-
     var progSql = "SELECT p.* FROM Programmes p \
                    JOIN Programme_Modules pm ON pm.programme = p.id \
                    WHERE pm.module = ?";
     var progResult = await db.query(progSql, [mCode]);
-
     var studSql = "SELECT s.* FROM Students s \
                    JOIN Student_Programme sp ON sp.id = s.id \
                    JOIN Programme_Modules pm ON pm.programme = sp.programme \
                    WHERE pm.module = ?";
     var studResult = await db.query(studSql, [mCode]);
-
     res.render('module-single', {
         module: mResult[0],
         programmes: progResult,
@@ -152,7 +143,101 @@ app.get("/module-single/:code", async function(req, res) {
 });
 
 // -------------------------------------------------------
-// Original db_test routes
+// WEEK 7 - CRUD: ADD NOTE
+// -------------------------------------------------------
+app.post('/add-note', async function(req, res) {
+    var params = req.body;
+    var student = new Student(params.id);
+    try {
+        await student.addStudentNote(params.note);
+        res.redirect('/student-single/' + params.id);
+    } catch (err) {
+        console.error('Error while adding note', err.message);
+        res.send('Error adding note');
+    }
+});
+
+// -------------------------------------------------------
+// WEEK 7 - CRUD: CHANGE PROGRAMME
+// -------------------------------------------------------
+app.post('/allocate-programme', async function(req, res) {
+    var params = req.body;
+    var student = new Student(params.id);
+    try {
+        await student.updateStudentProgramme(params.programme);
+        res.redirect('/student-single/' + params.id);
+    } catch (err) {
+        console.error('Error while updating programme', err.message);
+        res.send('Error updating programme');
+    }
+});
+
+// -------------------------------------------------------
+// WEEK 8 - AUTHENTICATION
+// -------------------------------------------------------
+
+// Register page
+app.get('/register', function(req, res) {
+    res.render('register');
+});
+
+// Login page
+app.get('/login', function(req, res) {
+    res.render('login');
+});
+
+// Set password for existing or new user
+app.post('/set-password', async function(req, res) {
+    var params = req.body;
+    var user = new User(params.email);
+    try {
+        var uId = await user.getIdFromEmail();
+        if (uId) {
+            await user.setUserPassword(params.password);
+            res.send('Password set successfully! <a href="/login">Login now</a>');
+        } else {
+            await user.addUser(params.password);
+            res.send('Account created! <a href="/login">Login now</a>');
+        }
+    } catch (err) {
+        console.error('Error while setting password', err.message);
+        res.send('Error setting password');
+    }
+});
+
+// Authenticate login
+app.post('/authenticate', async function(req, res) {
+    var params = req.body;
+    var user = new User(params.email);
+    try {
+        var uId = await user.getIdFromEmail();
+        if (uId) {
+            var match = await user.authenticate(params.password);
+            if (match) {
+                req.session.uid = uId;
+                req.session.loggedIn = true;
+                console.log(req.session.id);
+                res.redirect('/student-single/' + uId);
+            } else {
+                res.send('Invalid password. <a href="/login">Try again</a>');
+            }
+        } else {
+            res.send('Invalid email. <a href="/login">Try again</a>');
+        }
+    } catch (err) {
+        console.error('Error during authentication', err.message);
+        res.send('Error during login');
+    }
+});
+
+// Logout
+app.get('/logout', function(req, res) {
+    req.session.destroy();
+    res.redirect('/login');
+});
+
+// -------------------------------------------------------
+// Original test routes
 // -------------------------------------------------------
 app.get("/db_test", function(req, res) {
     var sql = 'SELECT * FROM test_table';
