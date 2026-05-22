@@ -1,0 +1,32 @@
+extends layout
+
+block content
+    h1 Module: #{module.name}
+    p
+        strong Module Code:
+        |  #{module.code}
+
+    h2 Programme(s) offering this Module
+    table
+        tr
+            th ID
+            th Programme Name
+        for prog in programmes
+            tr
+                td #{prog.id}
+                td
+                    a(href='/programme-single/' + prog.id) #{prog.name}
+
+    h2 Students taking this Module
+    table
+        tr
+            th ID
+            th Student Name
+        for student in students
+            tr
+                td #{student.id}
+                td
+                    a(href='/student-single/' + student.id) #{student.name}
+
+    p
+        a(href='/all-modules-formatted') &larr; Back to all modules

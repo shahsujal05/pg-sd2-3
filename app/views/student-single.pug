@@ -1,0 +1,21 @@
+extends layout
+
+block content
+    h1 Student: #{student.student}
+    p
+        strong Programme:
+        |  #{student.programme}
+
+    h2 Modules
+    table
+        tr
+            th Module Code
+            th Module Name
+        for mod in modules
+            tr
+                td #{mod.code}
+                td
+                    a(href='/module-single/' + mod.code) #{mod.name}
+
+    p
+        a(href='/all-students-formatted') &larr; Back to all students

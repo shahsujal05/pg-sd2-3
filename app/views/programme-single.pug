@@ -1,0 +1,21 @@
+extends layout
+
+block content
+    h1 Programme: #{programme.name}
+    p
+        strong Programme ID:
+        |  #{programme.id}
+
+    h2 Modules in this Programme
+    table
+        tr
+            th Module Code
+            th Module Name
+        for mod in modules
+            tr
+                td #{mod.code}
+                td
+                    a(href='/module-single/' + mod.code) #{mod.name}
+
+    p
+        a(href='/all-programmes-formatted') &larr; Back to all programmes
