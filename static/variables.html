@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Changing Web Page!</title>
+</head>
+<body>
+    <h1 id="pageHeading">page heading</h1>
+    <div id="content"></div>
+
+    <script>
+        var name = "Sujal";       // string type
+        var age = 25;              // Number type
+        var teacher = false;       // Boolean type
+
+        document.write('Name: ' + name + '<br>');
+        document.write('Age: ' + age + '<br>');
+        document.write('Is teacher? ' + teacher + '<br>');
+
+        // Debugging - open DevTools > Console to see this
+        console.log(name);
+        console.log(age);
+        console.log(teacher);
+
+        // Target a DOM element by ID
+        document.getElementById("content").innerHTML = name;
+
+        // Target the h1 by tag name (the [0] is needed because
+        // getElementsByTagName returns an array - even if there's only one h1)
+        document.getElementsByTagName("h1")[0].innerHTML = "Hello, " + name + "!";
+    </script>
+</body>
+</html>

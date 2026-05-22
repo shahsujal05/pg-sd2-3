@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Colour Change!</title>
+    <script>
+        function changeRed() {
+            var element = document.getElementById("my_text");
+            element.style['color'] = "red";
+        }
+
+        function changeBlue() {
+            var element = document.getElementById("my_text");
+            element.style['color'] = "blue";
+        }
+    </script>
+</head>
+<body>
+    <h1>Change the text colour!</h1>
+
+    <input type="button" value="Make it Red" onclick="changeRed()">
+    <input type="button" value="Make it Blue" onclick="changeBlue()">
+
+    <p id="my_text">
+        This text will change colour when you click a button above!
+    </p>
+</body>
+</html>
