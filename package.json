@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
+ "scripts": {
     "start": "supervisor index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+    "test": "nightwatch --env chrome ./custom-tests"
+},
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -18,5 +18,8 @@
     "mysql2": "^2.3.0",
     "pug": "^3.0.4",
     "supervisor": "^0.12.0"
+  },
+  "devDependencies": {
+    "nightwatch": "^3.16.0"
   }
 }
