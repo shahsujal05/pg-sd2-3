@@ -1,0 +1,43 @@
+name: CI - Docker Build and Tests
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check start
+        run: echo "Starting CI pipeline..."
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check Node version
+        run: node --version
+
+      - name: Create .env file from secret
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Install Node dependencies
+        run: npm install
+
+      - name: Start Docker containers
+        uses: hoverkraft-tech/compose-action@v2.0.1
+        with:
+          compose-file: "./docker-compose-deploy.yml"
+
+      - name: Install xvfb for headless browser
+        run: sudo apt-get install -y xvfb
+
+      - name: Run Nightwatch tests
+        run: xvfb-run --auto-servernum npm test -- --env chrome
